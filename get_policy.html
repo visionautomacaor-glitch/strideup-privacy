@@ -1,0 +1,132 @@
+<title>Política StrideUp para GitHub</title>
+<style>
+  /* Layout: título, passos curtos, dois botões e o código numa caixa rolável. */
+  :root {
+    --bg: #0a0a0b;
+    --surface: #131315;
+    --line: #26262a;
+    --fg: #f3f1ee;
+    --muted: #a8a39d;
+    --accent: #ff6a00;
+    --accent-ink: #140800;
+    --ok: #6fd08c;
+    --err: #ff8a5c;
+    color-scheme: dark;
+  }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    padding-inline: 18px;
+    padding-block: 28px 56px;
+  }
+  main { max-width: 860px; margin: 0 auto; display: grid; gap: 22px; }
+  .kicker { font-size: 12px; letter-spacing: .16em; text-transform: uppercase; color: var(--accent); font-weight: 700; }
+  h1 { margin: 4px 0 0; font-size: clamp(1.7rem, 6vw, 2.5rem); line-height: 1.1; text-wrap: balance; }
+  p { margin: 0; color: var(--muted); }
+  ol { margin: 0; padding-left: 22px; color: var(--muted); }
+  li { margin-bottom: 6px; }
+  strong { color: var(--fg); }
+  code { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; font-size: .92em; }
+  .bar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+  button {
+    font: inherit; font-weight: 700; cursor: pointer; border: 0; border-radius: 12px;
+    padding: 12px 20px; min-height: 44px;
+  }
+  button:focus-visible { outline: 3px solid var(--fg); outline-offset: 2px; }
+  .primary { background: var(--accent); color: var(--accent-ink); }
+  .ghost { background: transparent; color: var(--fg); border: 1px solid var(--line); }
+  .ghost:hover { border-color: var(--accent); color: var(--accent); }
+  #status { color: var(--muted); font-size: 14px; min-height: 1.5em; }
+  #status.ok { color: var(--ok); }
+  #status.err { color: var(--err); }
+  textarea {
+    width: 100%; min-height: 340px; resize: vertical;
+    background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: 12px;
+    padding: 14px; font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  textarea:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  .meta { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+</style>
+
+<main>
+  <header>
+    <span class="kicker">StrideUp · GitHub Pages</span>
+    <h1>index.html da política de privacidade</h1>
+  </header>
+
+  <ol>
+    <li>No GitHub, abra o repositório <strong>strideup-privacy</strong> e clique em <strong>index.html</strong>.</li>
+    <li>Clique no ícone do lápis (<strong>Edit this file</strong>).</li>
+    <li>Selecione todo o conteúdo (<code>Ctrl+A</code>), apague e cole o código abaixo (<code>Ctrl+V</code>).</li>
+    <li>Clique em <strong>Commit changes</strong>. Em cerca de 1 minuto a página atualiza.</li>
+  </ol>
+
+  <div class="bar">
+    <button class="primary" id="copy" type="button">Copiar código</button>
+    <button class="ghost" id="save" type="button">Baixar index.html</button>
+    <span id="status" role="status" aria-live="polite"></span>
+  </div>
+
+  <label for="code" class="meta" id="meta">Carregando o código…</label>
+  <textarea id="code" readonly spellcheck="false" aria-label="Código do index.html"></textarea>
+</main>
+
+<script>
+  var FILE = "index-github.html";
+  var codeEl = document.getElementById("code");
+  var statusEl = document.getElementById("status");
+  var metaEl = document.getElementById("meta");
+  var text = "";
+
+  function say(msg, kind) { statusEl.textContent = msg; statusEl.className = kind || ""; }
+
+  fetch(FILE)
+    .then(function (r) { if (!r.ok) throw new Error("fetch"); return r.text(); })
+    .then(function (t) {
+      text = t;
+      codeEl.value = t;
+      var kb = (new Blob([t]).size / 1024).toFixed(1);
+      metaEl.textContent = t.split("\n").length + " linhas · " + kb + " KB";
+    })
+    .catch(function () {
+      metaEl.textContent = "";
+      say("Não foi possível carregar o código. Recarregue a página.", "err");
+    });
+
+  document.getElementById("copy").addEventListener("click", async function () {
+    if (!text) { say("O código ainda não carregou.", "err"); return; }
+    try {
+      await navigator.clipboard.writeText(text);
+      say("Código copiado. Cole no GitHub com Ctrl+V.", "ok");
+    } catch (e) {
+      // Alguns apps bloqueiam a área de transferência: seleciona o texto para copiar à mão.
+      codeEl.focus();
+      codeEl.select();
+      say("Não consegui copiar sozinho. O texto foi selecionado: use Ctrl+C.", "err");
+    }
+  });
+
+  var dlPromise = null;
+  function getDownloads() {
+    if (!dlPromise) {
+      dlPromise = (window.claude && window.claude.use)
+        ? window.claude.use("downloads").catch(function () { return null; })
+        : Promise.resolve(null);
+    }
+    return dlPromise;
+  }
+
+  document.getElementById("save").addEventListener("click", async function () {
+    if (!text) { say("O código ainda não carregou.", "err"); return; }
+    var dl = await getDownloads();
+    if (!dl) { say("Download indisponível aqui. Use o botão Copiar código.", "err"); return; }
+    try {
+      await dl.save({ filename: "index.html", data: text });
+      say("index.html salvo.", "ok");
+    } catch (e) {
+      if (e && e.code === "declined") say("Download cancelado.");
+      else say("Não foi possível baixar. Use o botão Copiar código.", "err");
+    }
+  });
+</script>
